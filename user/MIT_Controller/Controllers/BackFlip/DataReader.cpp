@@ -39,28 +39,40 @@ void DataReader::load_control_plan(const char* filename) {
   printf("[Backflip DataReader] Allocating %ld bytes for control plan\n",
          file_size);
 
-  plan_buffer = (float*)malloc(file_size + 1);
+  // A plan is a headerless row-major float32 array, plan_cols per timestep.
+  // Validate that before trusting the contents: a file written in a different
+  // layout (or as text) otherwise loads silently and replays as garbage.
+  const uint64_t row_bytes = sizeof(float) * plan_cols;
+  if (file_size == 0 || file_size % row_bytes) {
+    printf(
+        "[DataReader] Error: %s is %llu bytes, not a multiple of %llu "
+        "(%d cols x %zu bytes). Refusing to load.\n",
+        filename, (unsigned long long)file_size, (unsigned long long)row_bytes,
+        plan_cols, sizeof(float));
+    fclose(f);
+    return;
+  }
+
+  plan_buffer = (float*)malloc(file_size);
 
   if (!plan_buffer) {
-    printf("[Backflip DataReader] malloc failed!\n");
+    printf("[DataReader] malloc failed!\n");
+    fclose(f);
     return;
   }
 
   uint64_t read_success = fread(plan_buffer, file_size, 1, f);
-  if (!read_success) {
-    printf("[Backflip DataReader] Error: fread failed.\n");
-  }
-
-  if (file_size % sizeof(float)) {
-    printf(
-        "[Backflip DataReader] Error: file size isn't divisible by size of "
-        "float!\n");
-  }
-
   fclose(f);
 
+  if (!read_success) {
+    printf("[DataReader] Error: fread failed.\n");
+    free(plan_buffer);
+    plan_buffer = nullptr;
+    return;
+  }
+
   plan_loaded = true;
-  plan_timesteps = file_size / (sizeof(float) * plan_cols);
+  plan_timesteps = file_size / row_bytes;
   printf("[Backflip DataReader] Done loading plan for %d timesteps\n",
          plan_timesteps);
 }
@@ -102,6 +114,7 @@ float* DataReader::get_plan_at_time(int timestep) {
 
 void DataReader::unload_control_plan() {
   free(plan_buffer);
+  plan_buffer = nullptr;
   plan_timesteps = -1;
   plan_loaded = false;
   printf("[Backflip DataReader] Unloaded plan.\n");
