@@ -14,7 +14,15 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 option(MINI_CHEETAH_BUILD "use compiler flags for mini cheetah computer" OFF)
-set(BUILD_TYPE_RELEASE TRUE)
+
+# CONFIGURE_DEPENDS makes file(GLOB) re-run at build time when sources are
+# added or removed. It needs CMake 3.12; fall back to plain GLOB on the older
+# cmake shipped with some robot images.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.12)
+  set(GLOB_DEPENDS CONFIGURE_DEPENDS)
+else()
+  set(GLOB_DEPENDS "")
+endif()
 
 option(NO_SIM "Do not build simulator" OFF)
 

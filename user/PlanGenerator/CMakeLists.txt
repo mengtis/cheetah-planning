@@ -1,0 +1,12 @@
+include_directories("../MIT_Controller")
+include_directories("../MIT_Controller/Controllers")
+include_directories("../../common/include")
+include_directories("../../third-party")
+include_directories(SYSTEM "../../third-party/qpOASES/include")
+include_directories("../../lcm-types/cpp")
+include_directories("/usr/local/include/lcm/")
+include_directories("/usr/local/include/eigen3")
+include_directories(${CMAKE_BINARY_DIR})
+
+add_executable(plan_generator main.cpp)
+target_link_libraries(plan_generator Locomotion biomimetics)
